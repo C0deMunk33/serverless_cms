@@ -30,6 +30,7 @@ contract Content_Registry is Ownable, Base58 {
     }
 
     function get_cids_from_content_list(uint32 from_idx, uint32 to_idx)  public view returns (string[] memory) {
+        if(content_count == 0 || from_idx > content_count) return new string[](0);
         if(to_idx > content_count) to_idx = content_count;        
         string[] memory cids = new string[](to_idx - from_idx);
         for (uint32 i = from_idx; i < to_idx; i++) {

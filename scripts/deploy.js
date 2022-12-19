@@ -1,26 +1,24 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
-// will compile your contracts, add the Hardhat Runtime Environment's members to the
-// global scope, and execute the script.
+// node run ganache
+// npx hardhat run --network localhost scripts/deploy.js
+// ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["*"]'
+// ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["GET", "POST"]'
+// ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '["Authorization"]'
+// ipfs config --json API.HTTPHeaders.Access-Control-Expose-Headers '["Location"]'
+// ipfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials '["true"]'
+//ipfs daemon
+
+// unpin all 
+// ipfs pin ls --type recursive | cut -d' ' -f1 | xargs -n1
+// ipfs pin rm cid
+// ipfs repo gc
 const hre = require("hardhat");
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+  const Content_Registry = await ethers.getContractFactory("Content_Registry");
+  const content_registry = await Content_Registry.deploy();
+  await content_registry.deployed();
 
-  const lockedAmount = hre.ethers.utils.parseEther("1");
-
-  const Lock = await hre.ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
-
-  await lock.deployed();
-
-  console.log(
-    `Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
-  );
+ 
 }
 
 // We recommend this pattern to be able to use async/await everywhere

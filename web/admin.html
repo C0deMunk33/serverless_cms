@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Serverless CRM</title>
+
+    <style>
+        /* content auto grid */
+        /* items are centered and separated only by card margin*/
+        /* items are all the same width */
+        #content_list_container{
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+
+        .card {
+            border: 1px solid black;
+            padding: 2px;
+            margin: 2px;
+            width: 500px;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+        
+        .card-body {
+            width: 100%;
+        }
+
+        .card-body > img,
+        .card-body > video {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin</h1>
+    <button id="connect_button" onclick="connect()">Connect</button>
+    
+
+    <!-- Register Content -->
+    <form id="register_content_form" style="display:none">
+        <h2>Register Content</h2>
+        <!-- drop down for what IPFS pinning service you want to use-->
+        <div>
+            <label for="pinning_service">Pinning Service</label>
+            <select id="pinning_service" name="pinning_service">
+                <option value="local">Local</option>
+                <option value="pinata">Pinata</option>
+                <option value="infura">Infura</option>
+            </select>
+        </div>
+        <!-- api key for ipfs -->
+        <div>
+            <label for="api_key">API Key</label>
+            <input type="text" id="api_key" name="api_key">
+        </div>
+        <!-- a dropdown for different media types -->
+        <div>
+            <label for="media_type">Media Type</label>
+            <select id="media_type" name="media_type" autocomplete="false">
+                <option value="select" selected>Please Select</option>
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+                <option value="audio">Audio</option>
+                <option value="text">Text</option>
+                <option value="link">Link</option>
+            </select>
+        <div>
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title">
+        </div>
+        <div id="file_input" style="display:none">
+            <label for="file">File (optional if text)</label>
+            <!-- image upload-->
+            <input type="file" id="file" name="file">
+        </div>
+        <div id="text_input" style="display:none">
+            <label for="text">Text</label>
+            <textarea id="text" name="text" rows="4" cols="50"></textarea>
+        </div>
+        <div id="link_input" style="display:none">
+            <label for="link">Link</label>
+            <input type="text" id="link" name="link">
+        </div>
+        <!-- submit button -->
+        <button type="submit">Register Content</button>
+
+    </form>
+
+    <!-- Content List -->
+    <div id="content_list" style="display:none">
+        <h2>Content List</h2>
+        <div id="content_list_container"></div>
+    </div>
+    <script src="lib/ipfs.min.js"></script>
+    <script src="lib/ethers.min.js"></script>
+    <script>
+        let content_registry_abi;
+        let ipfs_gateway = 'http://localhost:8080/ipfs/'
+        const content_registry_address = '0x62463c50836c325b28015b895986d8e6bd1caf78';
+        async function init(){
+            // load ABI from local libs/Content_Registry_ABI.json file
+            const response = await fetch('lib/Content_Registry_ABI.json');
+            content_registry_abi = await response.json();
+
+            // instantiate contract object
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner();
+            content_registry = new ethers.Contract(content_registry_address, content_registry_abi, signer);
+
+
+            // get content from contract using function function get_cids_from_content_list(uint32 from_idx, uint32 to_idx)  public view returns (string[] memory) 20 at a time until all the returned cids are ""
+            let cids = [];
+            let from_idx = 0;
+            let to_idx = 20;
+            
+            let complete = false;
+            let idx = 0
+            while(!complete){
+                let cids_from_contract = await content_registry.get_cids_from_content_list(from_idx, to_idx);                
+
+
+                console.log(cids_from_contract);
+                for(let i = 0; i < cids_from_contract.length; i++){
+                    let cid = cids_from_contract[i];
+                    if(cid != ""){
+                        cids.push({cid:cid, idx:idx});
+                    }
+                    idx++;
+                }
+                if(cids_from_contract.length < 20){
+                    complete = true;
+                }
+
+                from_idx += 20;
+                to_idx += 20;
+            }
+
+            // for each cid, get and render the content from ipfs
+            for(let i = 0; i < cids.length; i++){
+                let cid = cids[i];
+                let metadata_url =  ipfs_gateway + `${cid.cid}`;
+                let response = await fetch(metadata_url);
+                let metadata = await response.json();
+                render_content(metadata, cid.idx);
+                
+            }
+            document.getElementById("media_type").selectedIndex = 0
+        }  
+
+        async function add_to_local_ipfs(file, api_key){
+            ipfs = IpfsHttpClient.create({url:"http://localhost:5001/api/v0"})
+            //{ host: 'api.pinata.cloud', port: 443, apiKey: 'YOUR_API_KEY', apiSecret: 'YOUR_API_SECRET' }
+            //https://www.npmjs.com/package/ipfs-http-client
+            // must return cid
+           
+            let res;
+            if(typeof(file) == "string"){
+                res = await ipfs.add(file)
+            } else {
+                res = await ipfs.add(file)
+            }
+            return res;
+        }
+        async function add_to_pinata(file, api_key){
+            // must return cid
+        }
+        async function add_to_infura(file, api_key){
+            // must return cid
+        }
+
+        document.getElementById('register_content_form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            // Get form data and image file
+            var formData = new FormData(this);
+
+            let md = {}
+            var file = formData.get('file');
+
+            let selected_pinning_service = document.getElementById('pinning_service').value;
+            let api_key = document.getElementById('api_key').value;
+            let media_type = document.getElementById('media_type').value;
+            if(media_type === "select"){
+                alert("Please select a media type");
+                return;
+            }
+            let pin_function;
+
+            switch (selected_pinning_service) {
+                case 'local':
+                    pin_function = add_to_local_ipfs;
+                    break;
+                case 'pinata':
+                    pin_function = add_to_pinata;
+                    break;
+                case 'infura':
+                    pin_function = add_to_infura;
+                    break;
+                default:
+                    pin_function = add_to_local_ipfs;
+                    break;
+            }
+
+            for (var [key, value] of formData.entries()) { 
+                if(key === "api_key" || key === "pinning_service"){
+                    continue;
+                }
+                if(key == 'file'){
+                    if(media_type === 'image' || media_type === 'video' || media_type === 'audio'){
+                        if(file.name !== ""){
+                            //upload file to ipfs
+                            c = await pin_function(file, api_key);
+                            md[key] = c.path;
+                        } else {
+                            alert("Please select a file to upload");
+                            return;
+                        }
+                    } else if(media_type === 'text'){
+                        if(file.name !== ""){
+                            //upload file to ipfs
+                            c = await pin_function(file, api_key);
+                            md[key] = c.path;
+                        }
+                    } else if(media_type !== 'link') {
+                        //upload file to ipfs
+                        c = await pin_function(file, api_key);
+                        md[key] = c.path;
+                    }
+                } else {
+                    md[key] = value;
+                }
+            }
+
+            
+            let metadata = JSON.stringify(md)
+
+            // add metadata to ipfs
+            let final_cid = await pin_function(metadata, api_key);
+
+            // add cid to contract
+            let tx = await content_registry.Register_Content(final_cid.path);
+            await tx.wait();
+            location.reload()
+        });
+      
+
+        function render_content(metadata, idx){
+
+            let media_type = metadata.media_type;
+
+            let card = document.createElement('div');
+            card.className = "card";
+
+            let card_body = document.createElement('div');
+            card_body.className = "card-body";
+
+            // add title to card body
+            let title = document.createElement('h5');
+            title.className = "card-title";
+            title.innerHTML = metadata.title;
+            card_body.appendChild(title);
+            
+            switch(media_type){
+                case 'image':
+                    let img = document.createElement('img');
+                    img.src = ipfs_gateway + metadata.file;
+                    card_body.appendChild(img);
+                    break;
+                case 'video':
+                    let video = document.createElement('video');
+                    video.src = ipfs_gateway + metadata.file;
+                    video.controls = true;
+                    card_body.appendChild(video);
+                    break;
+                case 'audio':
+                    let audio = document.createElement('audio');
+                    audio.src = ipfs_gateway + metadata.file;
+                    audio.controls = true;
+                    card_body.appendChild(audio);
+                    break;
+                case 'text':
+                    // if image isn't empty, add image to card body                    
+                    if(metadata.file !== "" && metadata.file !== undefined){
+                        let img = document.createElement('img');
+                        img.src = ipfs_gateway + metadata.file;
+                        card_body.appendChild(img);
+                    }
+                    // add text to card body                
+                    let text = document.createElement('p');
+                    text.innerHTML = metadata.text;
+                    card_body.appendChild(text);
+                    break;
+                case 'link':
+                    let link = document.createElement('a');
+                    link.innerHTML = metadata.title;
+                    link.href = metadata.link;
+                    card_body.appendChild(link);
+                    break;
+                default:
+                    break;
+            }
+            // add Delete_Content button
+            let delete_button = document.createElement('button');
+            delete_button.className = "btn btn-primary";
+            delete_button.innerHTML = "Delete Content";
+            // make button block    
+            delete_button.style = "display: block; margin: 5px auto;";
+            delete_button.item_idx = idx;
+            delete_button.addEventListener('click', async function(event) {
+                event.preventDefault();
+                console.log(idx)
+                let tx = await content_registry.Delete_Content(idx);
+                await tx.wait();
+                location.reload();
+            });
+            card_body.appendChild(delete_button);
+            card.appendChild(card_body);
+            document.getElementById('content_list_container').appendChild(card);
+        }
+        
+        function connect() {
+            ethereum
+                .request({ method: 'eth_requestAccounts' })
+                .then(handleAccountsChanged)
+                .catch((error) => {
+                if (error.code === 4001) {
+                    // EIP-1193 userRejectedRequest error
+                    console.log('Please connect to MetaMask.');
+                } else {
+                    console.error(error);
+                }
+            });
+        }
+
+        let selectedAccount;
+        function handleAccountsChanged(accounts) {
+            if (accounts.length === 0) {
+                console.log('Please connect to MetaMask.');
+            } else if (accounts[0] !== selectedAccount) {
+                selectedAccount = accounts[0];
+                console.log(selectedAccount);
+            }
+
+            //hide connect button
+            document.getElementById('connect_button').style.display = 'none';
+            init();
+            //show register content form
+            document.getElementById('register_content_form').style.display = 'block';
+            document.getElementById('content_list').style.display = 'block';
+        }
+
+        
+        document.getElementById('media_type').addEventListener('change', function(event) {
+            let media_type = document.getElementById('media_type').value;
+            
+            if(media_type == "text"){
+                document.getElementById('link_input').style.display = 'none';
+                document.getElementById('text_input').style.display = 'block';
+                document.getElementById('file_input').style.display = 'block';
+            } 
+            else if(media_type == "link"){
+                document.getElementById('file_input').style.display = 'none';
+                document.getElementById('text_input').style.display = 'none';
+                document.getElementById('link_input').style.display = 'block';
+            }
+            else {
+                document.getElementById('file_input').style.display = 'block';
+                document.getElementById('link_input').style.display = 'none';
+                document.getElementById('text_input').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

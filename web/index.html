@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serverless CMS</title>
+
+    <style>
+        
+        body {
+            background-color: #000000;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+        }
+        h1 {
+            text-align: left;
+        }
+        #content_list_container{
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #connect_button {
+            background-color: #0d233a;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+
+        /* card */
+
+        .card {
+            padding: 2px;
+            margin: 10px;
+            width: 500px;
+            min-height: 500px;
+            max-height: 700px;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            background-color: #0d233a;
+            border-radius: 5px;
+            /*overflow scroll*/
+            overflow-y: hidden;
+        }
+        
+        .card-body {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            
+        }
+        .text_cardbody {
+            width: 100%;
+            height: 100%;
+            vertical-align: top;
+            display: block;
+            
+        }
+        .clickable_card {
+            cursor: pointer;
+            
+        }
+        .clickable_card:hover {
+            background-color: #1b3e5f;
+        }
+        .link-card-title {
+            /* vertical and horizontal center, no decoration, a modern sans font*/
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            text-align: center;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            font-size: 2em;
+        }
+        .link-card-subtitle {
+            /* vertical and horizontal center, no decoration, a modern sans font*/
+            display: flex;
+            align-items: center;
+            justify-content: baseline;
+            text-decoration: none;
+            text-align: center;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            font-size: 1em;
+        }
+        .link-card-icon {
+            
+            display: flex;            
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            
+        }        
+        .image-card-title,
+        .video-card-title, 
+        .audio-card-title {
+            /* top left corner of card-body with a little padding, a modern sans font*/
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 5px;
+            text-decoration: none;
+            text-align: center;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            font-size: 2em;
+            margin:0;
+            
+        }
+
+        .text-card-title {            
+            text-align: center;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            font-size: 2em;
+            margin:0;
+            display: block;
+        }
+        .text-card-text {
+            text-align: center;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            font-size: 1em;
+            margin:0;
+            display: block;
+            width: 100%;
+        }
+
+        .image-card-image,
+        .video-card-video,
+        .text-card-image {
+            /* fills the width of the card body without warping the image*/
+            width: 100%;
+            object-fit: cover;
+            
+        }
+        
+        audio {
+            width: 100%;
+
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Serverless CMS - Home</h1>
+    <!-- Connect Button -->
+    <button id="connect_button" onclick="connect()">Connect</button>
+    
+
+
+    <!-- Content List -->
+    <div id="content_list" style="display:none">
+        <div id="content_list_container">
+
+            <!-- Link card template -->
+            <div class="card" id="link_card_template" style="display: none;">
+                <div class="card-body clickable_card link_cardbody">
+                    <!-- Link Icon -->
+                    <img class="link-card-icon" src="img/link.svg" alt="link icon">
+                    <p class="link-card-title" id="link_card_link_template"></p>
+                    <br>
+                    <p class="link-card-subtitle" id="link_card_subtitle_template"></p>
+                </div>
+            </div>
+            <!-- Image card template -->
+            <div class="card" id="image_card_template" style="display: none;">
+                <div class="card-body clickable_card image_cardbody">
+                    <!-- Image -->
+                    <p class="image-card-title image_card_title" id="image_card_title_template"></p>
+                    <img class="image-card-image src="" alt="image"  id="image_card_image_template">
+                </div>
+            </div>    
+            <!-- Video card template -->    
+            <div class="card" id="video_card_template" style="display: none;">
+                <div class="card-body clickable_card video_cardbody">
+                    <!-- Video -->
+                    <p class="video-card-title" id="video_card_title_template"></p>
+                    <video class="video-card-video" id="video_card_video_template" controls>
+                        <source src="" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+            <!-- Text card template -->
+            <div class="card" id="text_card_template" style="display: none;">
+                <div class="card-body clickable_card text_cardbody">
+                    <!-- Text -->
+                    <h5 class="text-card-title" id="text_card_title_template"></h5>
+                    <br>
+                    <img class="text-card-image" src="" alt="" style="display: none;" id="text_card_image_template">
+                    
+                    <p class="text-card-text" id="text_card_text_template"></p>
+                </div>
+            </div>
+            <!-- Audio card template -->
+            <div class="card" id="audio_card_template" style="display: none;">
+                <div class="card-body audio_cardbody">
+                    <!-- Audio -->
+                    <p class="audio-card-title" id="audio_card_title_template"></p>
+                    <audio class="audio-card-audio" id="audio_card_audio_template" controls>
+                        <source src="" type="audio/mpeg">
+                    </audio>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    <script src="lib/ipfs.min.js"></script>
+    <script src="lib/ethers.min.js"></script>
+    <script>
+        let content_registry_abi;
+        let ipfs_gateway = 'http://localhost:8080/ipfs/'
+        const content_registry_address = '0x62463c50836c325b28015b895986d8e6bd1caf78';
+        async function init(){
+            // load ABI from local libs/Content_Registry_ABI.json file
+            const response = await fetch('lib/Content_Registry_ABI.json');
+            content_registry_abi = await response.json();
+
+            // instantiate contract object
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner();
+            content_registry = new ethers.Contract(content_registry_address, content_registry_abi, signer);
+
+
+            // get content from contract using function function get_cids_from_content_list(uint32 from_idx, uint32 to_idx)  public view returns (string[] memory) 20 at a time until all the returned cids are ""
+            let cids = [];
+            let from_idx = 0;
+            let to_idx = 20;
+            
+            let complete = false;
+            let idx = 0
+            while(!complete){
+                let cids_from_contract = await content_registry.get_cids_from_content_list(from_idx, to_idx);                
+
+                for(let i = 0; i < cids_from_contract.length; i++){
+                    let cid = cids_from_contract[i];
+                    if(cid != ""){
+                        cids.push({cid:cid, idx:idx});
+                    }
+                    idx++;
+                }
+                if(cids_from_contract.length < 20){
+                    complete = true;
+                }
+
+                from_idx += 20;
+                to_idx += 20;
+            }
+
+            // for each cid, get and render the content from ipfs
+            for(let i = 0; i < cids.length; i++){
+                let cid = cids[i];
+                let metadata_url =  ipfs_gateway + `${cid.cid}`;
+                let response = await fetch(metadata_url);
+                let metadata = await response.json();
+                render_content(metadata, cid.idx);
+                
+            }
+        }  
+
+        async function add_to_local_ipfs(file, api_key){
+            ipfs = IpfsHttpClient.create({url:"http://localhost:5001/api/v0"})
+            //{ host: 'api.pinata.cloud', port: 443, apiKey: 'YOUR_API_KEY', apiSecret: 'YOUR_API_SECRET' }
+            //https://www.npmjs.com/package/ipfs-http-client
+            // must return cid
+           
+            let res;
+            if(typeof(file) == "string"){
+                res = await ipfs.add(file)
+            } else {
+                res = await ipfs.add(file)
+            }
+            return res;
+        }
+        async function add_to_pinata(file, api_key){
+            // must return cid
+        }
+        async function add_to_infura(file, api_key){
+            // must return cid
+        }
+     
+
+        function render_content(metadata, idx){
+
+            let media_type = metadata.media_type;
+
+            let container = document.getElementById('content_list_container')
+            
+            
+            switch(media_type){
+                case 'image':
+                    // create card from image_card_template
+                    image_card = document.getElementById('image_card_template').cloneNode(true);
+                    image_card.style.display = "block";
+                    image_card.id = "card_" + idx;
+
+                    let image_card_title = image_card.querySelector('#image_card_title_template');
+                    image_card_title.innerHTML = metadata.title;
+
+                    let image_card_image = image_card.querySelector('#image_card_image_template');
+                    image_card_image.src = ipfs_gateway + metadata.file;
+                    
+                    // set alt text to title
+                    image_card_image.alt = metadata.title;
+                    
+                    // on click of card, open image in new tab
+                    image_card.onclick = function(){
+                        window.open(ipfs_gateway + metadata.file);
+                    }
+                    
+                    container.appendChild(image_card);
+                    break;
+                case 'video':
+                    // create card from video_card_template
+                    video_card = document.getElementById('video_card_template').cloneNode(true);
+                    video_card.style.display = "block";
+                    video_card.id = "card_" + idx;
+
+                    let video_card_title = video_card.querySelector('#video_card_title_template');
+                    video_card_title.innerHTML = metadata.title;
+
+                    let video_card_video = video_card.querySelector('#video_card_video_template');
+                    video_card_video.src = ipfs_gateway + metadata.file;
+
+                    // set alt text to title
+                    video_card_video.alt = metadata.title;
+
+                    // on click of card, open video in new tab
+                    video_card.onclick = function(){
+                        window.open(ipfs_gateway + metadata.file);
+                    }
+
+                    container.appendChild(video_card);
+                    break;
+                case 'audio':
+                    // create card from audio_card_template
+                    audio_card = document.getElementById('audio_card_template').cloneNode(true);
+                    audio_card.style.display = "block";
+                    audio_card.id = "card_" + idx;
+                    
+                    let audio_card_title = audio_card.querySelector('#audio_card_title_template');
+                    audio_card_title.innerHTML = metadata.title;
+
+                    let audio_card_audio = audio_card.querySelector('#audio_card_audio_template');
+                    audio_card_audio.src = ipfs_gateway + metadata.file;
+
+                    // set alt text to title
+                    audio_card_audio.alt = metadata.title;
+
+
+                    container.appendChild(audio_card);
+                    break;
+                case 'text':
+                    // create card from text_card_template
+                    text_card = document.getElementById('text_card_template').cloneNode(true);
+                    text_card.style.display = "block";
+                    text_card.id = "card_" + idx;
+
+                    let text_card_title = text_card.querySelector('#text_card_title_template');
+                    text_card_title.innerHTML = metadata.title;
+
+                    let text_card_text = text_card.querySelector('#text_card_text_template');
+                    text_card_text.innerHTML = metadata.text;
+
+                    console.log(metadata)
+
+                    // on click of card open text in new tab
+                    text_card.onclick = function(){
+                        window.open('/item.html?idx=' + idx);
+                    }
+
+                    //if metadata.file !== "" && metadata.file !== undefined set text-card-image
+                    if(metadata.file !== "" && metadata.file !== undefined){
+                        console.log("file exists")
+                        let text_card_image = text_card.querySelector('#text_card_image_template');
+                        text_card_image.src = ipfs_gateway + metadata.file;
+                        text_card_image.style.display = "block";
+                    }
+                    container.appendChild(text_card);
+                    break;
+                case 'link':
+                    // create card from link_card_template
+                    link_card = document.getElementById('link_card_template').cloneNode(true);
+                    link_card.style.display = "block";
+                    link_card.id = "card_" + idx;
+                    
+                    let link_card_title = link_card.querySelector('#link_card_link_template');
+                    link_card_title.innerHTML = metadata.title;
+                    
+                    let link_card_subtitle = link_card.querySelector('#link_card_subtitle_template');
+                    link_card_subtitle.innerHTML = "(" + metadata.link + ")";
+
+                    // on click of card, open link in new tab
+                    link_card.addEventListener('click', function(){
+                        window.open(metadata.link, '_blank');
+                    })
+                    container.appendChild(link_card);
+                    break;
+                default:
+                    break;
+            }
+            
+            
+        }
+        
+        function connect() {
+            ethereum
+                .request({ method: 'eth_requestAccounts' })
+                .then(handleAccountsChanged)
+                .catch((error) => {
+                if (error.code === 4001) {
+                    // EIP-1193 userRejectedRequest error
+                    console.log('Please connect to MetaMask.');
+                } else {
+                    console.error(error);
+                }
+            });
+        }
+
+        let selectedAccount;
+        function handleAccountsChanged(accounts) {
+            if (accounts.length === 0) {
+                console.log('Please connect to MetaMask.');
+            } else if (accounts[0] !== selectedAccount) {
+                selectedAccount = accounts[0];
+            }
+
+            //hide connect button
+            document.getElementById('connect_button').style.display = 'none';
+            init();
+            //show register content form
+            document.getElementById('content_list').style.display = 'block';
+        }
+
+    
+    </script>
+</body>
+</html>
